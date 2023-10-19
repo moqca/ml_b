@@ -127,10 +127,34 @@ def get_game_ids(start_dt, end_dt):
        process_game_pk(download_games_year(year))
 
 # %%
-# we need to get a lit of jsons we've alaready downloaded.
-# For this we have a small utility that checks the directory where json files live, we then save that on a sqlite table
-def update_json_innventory():
+def update_json_inventory(path):
+    #we need to get a lit of jsons we've alaready downloaded to gamejson directory
+    #we separate extention and filaname, filename to a table in an sqlite database "data.db"
+    cursor.execute('''
+            CREATE TABLE IF NOT EXISTS json_files (
+                id INTEGER PRIMARY KEY,
+                filename TEXT,
+                extension TEXT
+            )
+        ''')
 
+
+    cursor.execute("SELECT filename, extension from json_files")
+    existing_files = set((filename, extension) for filename, extension in cursor.fetchall())
+
+
+    for root, dirs, files in os.walk(path):
+        for filename in files:
+            if filename.endswith('.json'):
+                name, ext = os.path.splitext(filename)
+                if (name, ext) not in existing_files:
+                    try:
+                        cursor.execute("INSERT INTO json_files(filename, extension) VALUES (?, ?)", (name, ext))
+                        existing_files.add((name, ext))
+                    except Exception as e:
+                        print("Error inserting file {filename}: {e}")
+    conn.commit()
 
 # %%
+
 conn.close()
